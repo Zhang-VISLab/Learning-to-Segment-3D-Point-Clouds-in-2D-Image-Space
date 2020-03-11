@@ -27,3 +27,13 @@ python network_training.py
 ```
 python network_testing.py
 ```
+
+## Citation
+```
+@inproceedings{lyu2020learning,
+  title={Learning to Segment 3D Point Clouds in 2D Image Space},
+  author={lyu, Yecheng and Huang, Xinming and Zhang, Ziming},
+  booktitle={Computer Vision and Pattern Recognition (CVPR)},  
+  year={2020}  
+}
+```
