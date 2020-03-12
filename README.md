@@ -7,7 +7,7 @@ In contrast to the literature where local patterns in 3D point clouds are captur
 
 ##
 
-## conda environment setup
+## Conda environment setup
 ```
 conda create -n XYZNet
 conda activate XYZNet
