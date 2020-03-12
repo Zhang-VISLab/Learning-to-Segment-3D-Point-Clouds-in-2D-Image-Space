@@ -5,6 +5,8 @@ In contrast to the literature where local patterns in 3D point clouds are captur
 
 ![ShapeNet](ShapeNet.png)
 
+##
+
 ## conda environment setup
 ```
 conda create -n XYZNet
