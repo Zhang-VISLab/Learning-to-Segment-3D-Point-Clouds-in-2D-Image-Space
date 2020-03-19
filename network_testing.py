@@ -117,6 +117,8 @@ print(model.summary())
 #%%
 mIoU_class_list=[]
 mIoU_instance_list = []
+
+# for each class, get the CAD model list, and corresponding point-image lookup table
 for i_class in range(16):
     idx_list = np.where(y_test==i_class)[0]
     pos_list = p_test[idx_list]
@@ -127,13 +129,24 @@ for i_class in range(16):
 
 
     mIoU_class = 0
-
+    
+	# for each CAD model, get the point-image lookup table, ground truth in each class
     for pos,gt,idx in zip(pos_list,gt_list,idx_list):
-
+		
+		# predict one CAD model
         prediction = model.predict(x_test[idx:idx+1],batch_size = 1)[0]
         tp = 0
         fp = 0
         fn = 0
+		
+		# count the true positive, false positive and false negative samples in each CAD model
+		#
+		# P.S. 	Here tp,fp and fn are counted in CAD model instance level with multiple segmentation labels.
+		# 		In instance-level counting, a fp in one class definitely leads to a false negative in one of the 
+		#		other class. 
+		#		For example, a CAD model of "Car" has three segment classes "body", "wheel" and "mirror", and at
+		#		point A within class "body" is predicted as "wheel". At this time, a false positive is counted
+		#		in "wheel"; meanwhile, a false negative is also counted in "body". 
         for p,g in zip(pos,gt):
             pre = prediction[p[0],p[1],label_min:label_max].argmax()+label_min
             tp += g==pre
@@ -142,7 +155,7 @@ for i_class in range(16):
 
 
 
-
+		# count IoU of each CAD model
         mIoU_instance = tp/(tp+fp+fn)
         mIoU_instance_list.append(mIoU_instance)
         mIoU_class+=mIoU_instance
