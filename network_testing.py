@@ -114,44 +114,77 @@ model.compile(opti,loss ='categorical_crossentropy',metrics=[weighted_acc])
 model.load_weights(model_path)
 
 print(model.summary())
-#%%
-mIoU_class_list=[]
-mIoU_instance_list = []
+
+#%% predict all labels
+prediction_all = model.predict(x_test,verbose=1,batch_size=8)
+
+#%% get start and end label id for each object category
+
+class_label_region = np.zeros((16,2),dtype=np.int)
 for i_class in range(16):
     idx_list = np.where(y_test==i_class)[0]
     pos_list = p_test[idx_list]
     gt_list  = l_test[idx_list]
 
     label_min = gt_list.min()
-    label_max = gt_list.max()+1
+    label_max = gt_list.max()
+
+    class_label_region[i_class,0] = label_min
+    class_label_region[i_class,1] = label_max
+
+#%% transform image segments to point segments
+
+pre_test = np.zeros_like(l_test)
+for idx_sample,pos,pre_image,obj_class in zip(range(len(p_test)),p_test,prediction_all,y_test):
+
+    pre_sample = np.zeros_like(l_test[0])
+    for id_point, pt in zip(range(len(pos)),pos):
+        pre = pre_image[pt[0],pt[1]]
+
+        label_min = class_label_region[obj_class,0]
+        label_max = class_label_region[obj_class,1]
+
+        pre = pre[label_min:label_max+1].argmax()+label_min
+        pre_sample[id_point] = pre
+
+    pre_test[idx_sample] = pre_sample
+
+#%% calculate iou for each shape
+iou_shape = np.zeros(len(l_test))
+for idx_sample,pre_sample,gt_sample,obj_class in zip(range(len(l_test)),pre_test,l_test,y_test):
+    label_min = class_label_region[obj_class,0]
+    label_max = class_label_region[obj_class,1]
+
+    iou_list = []
+    # % for each segment, calculate iou
+    for i_class in range(label_min,label_max+1):
+        # break
+        tp = np.sum( (pre_sample == i_class) * (gt_sample == i_class) )
+        fp = np.sum( (pre_sample == i_class) * (gt_sample != i_class) )
+        fn = np.sum( (pre_sample != i_class) * (gt_sample == i_class) )
+
+        # % if current sugment exists then count the iou
+        if(tp+fp+fn>0):
+            iou = tp / (tp+fp+fn)
+        else:
+            iou=1
+        iou_list.append(iou)
+
+    iou_shape[idx_sample] = np.mean(iou_list)
+
+    if( idx_sample % 100 == 9):
+        print('finish iou cauculation: ',idx_sample,'/',len(l_test))
+
+print( 'iou_instacne =', iou_shape.mean())
+#%% calculate iou for each class
+
+iou_class = np.zeros(16)
+for obj_class in range(16):
+    iou_obj_class = iou_shape[y_test==obj_class]
+    iou_class[obj_class] = iou_obj_class.mean()
 
 
-    mIoU_class = 0
+print( 'iou_class =', iou_class.mean())
 
-    for pos,gt,idx in zip(pos_list,gt_list,idx_list):
-
-        prediction = model.predict(x_test[idx:idx+1],batch_size = 1)[0]
-        tp = 0
-        fp = 0
-        fn = 0
-        for p,g in zip(pos,gt):
-            pre = prediction[p[0],p[1],label_min:label_max].argmax()+label_min
-            tp += g==pre
-            fp += g!=pre
-            fn += g!=pre
-
-
-
-
-        mIoU_instance = tp/(tp+fp+fn)
-        mIoU_instance_list.append(mIoU_instance)
-        mIoU_class+=mIoU_instance
-
-    mIoU_class_mean =mIoU_class/len(idx_list)
-    mIoU_class_list.append(mIoU_class_mean)
-    print('class',i_class,",acc=",mIoU_class_mean)
-
-
-print("-----------")
-print('mIoU_class_mean=',np.array(mIoU_class_list).mean())
-print('mIoU_instance_list=',np.array(mIoU_instance_list).mean())
+for obj_class in range(16):
+    print('class',obj_class,",iou=",iou_class[obj_class])
