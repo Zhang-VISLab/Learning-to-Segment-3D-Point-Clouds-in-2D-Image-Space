@@ -88,7 +88,7 @@ After training, we have got a well trained network models. To predict the semant
 ```
 python network_testing.py
 ```
-**Notice: Both shared models were retrained from scratch, whose results are slightly different from the ones reported in our CVPR paper.**
+**Notice: Both shared models were retrained from scratch, whose results are slightly different from the ones reported in our paper.**
 
 ## Citation
 ```
