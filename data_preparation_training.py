@@ -1,8 +1,6 @@
 import os
 import h5py
-import provider
-
-BASE_DIR= '/mnt/Research/CVPR_2020/ShapeNet/hdf5_data/'
+BASE_DIR= 'hdf5_data/'
 
 #%% analyze the dataset
 print("---------------")
@@ -37,7 +35,7 @@ s_train =f0.create_dataset("s_train", (train_length,2048), dtype='|u1')
 
 x_test =f0.create_dataset("x_test", (test_length,2048,3), dtype='<f4')
 y_test =f0.create_dataset("y_test", (test_length,1), dtype='|u1')
-s_test =f0.create_dataset("s_test", (train_length,2048), dtype='|u1')
+s_test =f0.create_dataset("s_test", (test_length,2048), dtype='|u1')
 
 offset = 0
 for train_file in train_files:
@@ -59,3 +57,5 @@ for test_file in test_files:
         s_test[offset:offset+dataset_length] =f['pid']
         offset += dataset_length
 
+#%%
+f0.close()

@@ -1,23 +1,19 @@
-# import os
-#os.environ["CUDA_VISIBLE_DEVICES"]="1";  
-import h5py
 import numpy as np
-
-import keras
-import keras.layers as L
-import keras.backend as K
-from keras.utils import HDF5Matrix
+import h5py
 from sklearn.cluster import KMeans
-from scipy.spatial.distance  import cdist,pdist,squareform
 import tensorflow as tf
 import networkx as nx
-print(tf.version.VERSION)
 
-config = tf.ConfigProto()
+
+config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 0.7
 sess= tf.compat.v1.Session(config=config)
 
+import tensorflow.keras as keras
+import tensorflow.keras.layers as L
+import tensorflow.keras.backend as K
+print(tf.version.VERSION)
 # load GPGL functions
 import provider
 from fun_GPGL import fun_GPGL_layout_push,graph_cut,fun_graph_cosntruct
@@ -31,31 +27,27 @@ batch_size = 1
 
 file_name = 'ShapeNet_training'
 dataset_path = file_name+'.hdf5'
-save_path = file_name+'_NUM_POINTS_'+str(NUM_POINTS)+'NUM_CUTS_'+str(NUM_CUTS)+'SIZE_SUB_'+str(SIZE_SUB)+'SIZE_TOP_'+str(SIZE_TOP)
-
+save_path = 'ShapeNet_model.h5'
 #%% Kmeans solver initialization
 
-kmeans_solver = KMeans(n_clusters=NUM_CUTS, n_init=1,n_jobs=1,max_iter=100)
+kmeans_solver = KMeans(n_clusters=NUM_CUTS, n_init=1,max_iter=100)
 
 #%%
+f = h5py.File(dataset_path,'r')
 print("loading training data")
-x_train = np.array(tf.keras.utils.HDF5Matrix(dataset_path,'x_train')[:])
-s_train = np.array(tf.keras.utils.HDF5Matrix(dataset_path,'s_train')[:])
+x_train = f['x_train']
+s_train = f['s_train']
 
 
 #%%
 print("loading testing data")
-x_test  = np.array(tf.keras.utils.HDF5Matrix(dataset_path,'x_test')[:2874])
-s_test  = np.array(tf.keras.utils.HDF5Matrix(dataset_path,'s_test')[:2874])
-#%%
-class_weights = np.ones(51)
-class_weights[-1] = 0
-#%%
+x_test = f['x_test']
+s_test = f['s_test']
 
+#%%
 x_train_shape = x_train.shape
 x_test_shape =  x_test.shape
 print('train samples: %d, test samples: %d' % (x_train_shape[0], x_test_shape[0]))
-
 
 #%%
 def GPGL2_seg(data,current_sample_seg):
@@ -67,11 +59,9 @@ def GPGL2_seg(data,current_sample_seg):
 
     aij_mat = fun_graph_cosntruct(node_top)
 
-    # aij_mat = squareform(pdist(node_top),checks=False)
     H = nx.from_numpy_matrix(aij_mat)
     pos_spring = nx.spring_layout(H)
     pos_spring = np.array([pos for idx,pos in sorted(pos_spring.items())])
-    # pos_spring = np.array(forceatlas2.forceatlas2(aij_mat, None, 10))
 
     pos = fun_GPGL_layout_push(pos_spring,SIZE_SUB)
     pos_top = fun_GPGL_layout_push(pos_spring,SIZE_TOP)
@@ -84,15 +74,12 @@ def GPGL2_seg(data,current_sample_seg):
         if(len(pos_cut_3D)<5):
             pos_raw = [[0,0],[0,1],[1,1],[1,0]]
             pos = pos_raw[:len(pos_cut_3D)]
-            # H =  nx.from_numpy_matrix(np.ones([len(pos_cut_3D),len(pos_cut_3D)]))
             pos_cuts.append(pos)
             continue
         aij_mat = fun_graph_cosntruct(pos_cut_3D)
-        # aij_mat = squareform(pdist(pos_cut_3D),checks=False)
         H = nx.from_numpy_matrix(aij_mat)
         pos_spring = nx.spring_layout(H)
         pos_spring = np.array([pos for idx,pos in sorted(pos_spring.items())])
-        # pos_spring = np.array(forceatlas2.forceatlas2(aij_mat, None, 10))
 
         pos = fun_GPGL_layout_push(pos_spring,SIZE_SUB)
 
@@ -109,14 +96,11 @@ def GPGL2_seg(data,current_sample_seg):
         cuts_count[label] +=1
     pos_all=np.array(pos_all)
 
-
-
-
     ##%% assign all features into the grid map
     mat = np.zeros([SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,3])
     seg = np.zeros([SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,51])
     seg[:,:,-1] = 1
-    
+
     for data1,seg1, pos in zip(data,current_sample_seg,pos_all):
         mat[pos[0],pos[1]]=data1
         seg[pos[0],pos[1],int(seg1)]=1
@@ -140,7 +124,6 @@ class DataGenerator(keras.utils.Sequence):
         self.on_epoch_end()
 
     def __len__(self):
-        #return int(np.floor(self.size / self.batch_size))
         return self.size//self.batch_size
 
     def __getitem__(self, index):
@@ -244,27 +227,24 @@ not_mask = L.Lambda(lambda x: 1-x)(mask)
 
 ouputs = L.Concatenate(name="segment_out")([ouputs,not_mask])
 model = keras.Model(inputs=inputs1, outputs=[ouputs])
-opti = keras.optimizers.Adam(1e-5)
+opti = keras.optimizers.Adam(1e-4)
 model.compile(opti,loss ='categorical_crossentropy',metrics=[weighted_acc])
 
 print(model.summary())
+
 #%%
 print("-------------------------------")
 print("*******************************")
 print("*****",save_path,"*****")
 print("*******************************")
 print("-------------------------------")
-# file_path = save_path+'_model.h5'
-checkpointer = keras.callbacks.ModelCheckpoint(filepath=save_path+"_model.h5", monitor='val_weighted_acc', verbose=1, save_best_only=True,save_weights_only=False)
+checkpointer = keras.callbacks.ModelCheckpoint(filepath=save_path, monitor='val_weighted_acc', verbose=1, save_best_only=True,save_weights_only=False)
 namecall =  keras.callbacks.LambdaCallback(on_epoch_begin=lambda epoch,logs: print("*****",save_path,"*****"))
 
 
-history = model.fit_generator(generator = train_generator,class_weight = [class_weights],
-                              steps_per_epoch=x_train_shape[0]//batch_size,
-                              use_multiprocessing=False,
-                              epochs = 100,  verbose=1,
+history = model.fit(x=train_generator,class_weight = [],
+                              epochs = 300,  verbose=1,
                               validation_data=test_generator,
-                              validation_steps=x_test_shape[0],
                                callbacks=[checkpointer,namecall]
                               )
 
