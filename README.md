@@ -56,7 +56,7 @@ Other training settings are as default.
 The training time is as follows: data_preparation: 25 hr, training: 120 hr. 
 The demo model achieved 90.1% accuracy, 85.6% instance-mean-IoU and 83.1% class-mean-IoU on the test set.
 The model is available at https://drive.google.com/file/d/1lDg8B6AHe7BmgI7dfz5mRGIK24F7Eg28/view?usp=sharing.
-
+Traning log is available at https://drive.google.com/file/d/1TBnksOJjEhWJuIQD-tbQUb_fichDKqri/view?usp=sharing.
 
 ## Training choice 2: Training end-to-end
 Training the network end-to-end is space efficient.
@@ -81,7 +81,7 @@ Other training settings are as default.
 The training time is as follows: training: 200 hr.
 The demo model achieved 89.0% accuracy, 84.1% instance-mean-IoU and 81.2% class-mean-IoU on the test set.
 The model is available at https://drive.google.com/file/d/1Ps1wZ79aMjk1XHtYkXiaP6Sp09ExImN9/view?usp=sharing.
-
+Traning log is available at https://drive.google.com/file/d/1TBnksOJjEhWJuIQD-tbQUb_fichDKqri/view?usp=sharing.
 
 ## Test the network
 After training, we have got a well trained network models. To predict the semantic labels and evaluate on testing sets, run the following command:
