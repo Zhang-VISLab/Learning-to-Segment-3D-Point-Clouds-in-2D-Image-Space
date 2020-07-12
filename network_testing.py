@@ -8,7 +8,7 @@ from tensorflow import keras
 import tensorflow.keras.layers as L
 import tensorflow.keras.backend as K
 
-config = tf.ConfigProto()
+config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 0.7
 sess= tf.compat.v1.Session(config=config)
@@ -25,18 +25,20 @@ batch_size = 1
 
 file_name = 'ShapeNet_testing'
 dataset_path = file_name+'.hdf5'
-save_path = file_name+'_NUM_POINTS_'+str(NUM_POINTS)+'NUM_CUTS_'+str(NUM_CUTS)+'SIZE_SUB_'+str(SIZE_SUB)+'SIZE_TOP_'+str(SIZE_TOP)
-
-model_path = 'ShapeNet_training_NUM_POINTS_2048NUM_CUTS_32SIZE_SUB_16SIZE_TOP_16_model.h5'
+result_path = file_name+'_result.hdf5'
+model_path = 'ShapeNet_model.h5'
 f = h5py.File(dataset_path, 'r')
 
 #%%
 print("loading testing data")
-x_test  = tf.keras.utils.HDF5Matrix(dataset_path,'x_test')
-y_test  = np.array(tf.keras.utils.HDF5Matrix(dataset_path,'y_test')).argmax(-1)
-s_test  = tf.keras.utils.HDF5Matrix(dataset_path,'s_test')
-p_test = np.array(f['p_test'])
-l_test  = tf.keras.utils.HDF5Matrix(dataset_path,'l_test')
+f = h5py.File(dataset_path,'r')
+x_test = f['x_test']
+y_test = f['y_test'][:]
+p_test = f['p_test'][:]
+l_test = f['l_test'][:]
+d_test = f['d_test'][:]
+
+
 #%%
 class_weights = np.ones(51)
 class_weights[-1] = 0
@@ -61,10 +63,7 @@ def MXM_2D(inputs,filters):
     input_tensor = L.Input(shape=input_shape)
     x0 = L.Conv2D(filters,(1,1),padding='same',activation='linear')(input_tensor)
     x1 = L.Conv2D(filters,(3,3),padding='same',activation='linear')(input_tensor)
-    # x2 = L.Conv2D(filters,(3,3),padding='same',activation='linear')(input_tensor)
-    # x3 = L.Conv2D(filters,(3,3),padding='same',activation='linear')(x2)
     x = L.Concatenate()([x0,x1])
-    # x = L.Maximum()([x0,x1])
     x = L.ReLU()(x)
     model = keras.Model(inputs=input_tensor, outputs=x)
     return model
@@ -107,22 +106,16 @@ not_mask = L.Lambda(lambda x: 1-x)(mask)
 
 ouputs = L.Concatenate(name="segment_out")([ouputs,not_mask])
 model = keras.Model(inputs=inputs1, outputs=[ouputs])
-opti = keras.optimizers.Adam(1e-5)
-model.compile(opti,loss ='categorical_crossentropy',metrics=[weighted_acc])
-
 
 model.load_weights(model_path)
 
 print(model.summary())
 
-#%% predict all labels
-prediction_all = model.predict(x_test,verbose=1,batch_size=8)
-
 #%% get start and end label id for each object category
-
+y_test_digits = np.argmax(y_test,-1)
 class_label_region = np.zeros((16,2),dtype=np.int)
 for i_class in range(16):
-    idx_list = np.where(y_test==i_class)[0]
+    idx_list = np.where(y_test_digits==i_class)[0]
     pos_list = p_test[idx_list]
     gt_list  = l_test[idx_list]
 
@@ -132,11 +125,21 @@ for i_class in range(16):
     class_label_region[i_class,0] = label_min
     class_label_region[i_class,1] = label_max
 
-#%% transform image segments to point segments
 
+#%% create dataset to store the test result
+test_set_len = len(x_test)
+f1 = h5py.File(result_path,'w')
+y_set = f1.create_dataset('y_test_digits',data = y_test_digits)
+l_set = f1.create_dataset('l_test',data=l_test)
+p_set = f1.create_dataset('p_test',data=p_test) # 2D position
+d_set = f1.create_dataset('d_test',data=p_test) # 3D position
+x_set = f1.create_dataset('pre_test', shape=(test_set_len,2048),dtype=np.int)
+
+
+#%% transform image segments to point segments and store it to dataset
 pre_test = np.zeros_like(l_test)
-for idx_sample,pos,pre_image,obj_class in zip(range(len(p_test)),p_test,prediction_all,y_test):
-
+for idx_sample,pos,obj_class in zip(range(len(p_test)),p_test,y_test_digits):
+    pre_image = model.predict(x_test[idx_sample:idx_sample+1],verbose=0,batch_size=1)[0]
     pre_sample = np.zeros_like(l_test[0])
     for id_point, pt in zip(range(len(pos)),pos):
         pre = pre_image[pt[0],pt[1]]
@@ -148,10 +151,17 @@ for idx_sample,pos,pre_image,obj_class in zip(range(len(p_test)),p_test,predicti
         pre_sample[id_point] = pre
 
     pre_test[idx_sample] = pre_sample
+    x_set[idx_sample] = pre_sample
+    if( idx_sample % 100 == 0):
+        print('finish point segments: ',idx_sample,'/',len(l_test))
+
+#%% close the result dataset
+f.close()
+f1.close()
 
 #%% calculate iou for each shape
 iou_shape = np.zeros(len(l_test))
-for idx_sample,pre_sample,gt_sample,obj_class in zip(range(len(l_test)),pre_test,l_test,y_test):
+for idx_sample,pre_sample,gt_sample,obj_class in zip(range(len(l_test)),pre_test,l_test,y_test_digits):
     label_min = class_label_region[obj_class,0]
     label_max = class_label_region[obj_class,1]
 
@@ -168,22 +178,20 @@ for idx_sample,pre_sample,gt_sample,obj_class in zip(range(len(l_test)),pre_test
             iou = tp / (tp+fp+fn)
         else:
             iou=1
+
         iou_list.append(iou)
 
     iou_shape[idx_sample] = np.mean(iou_list)
 
-    if( idx_sample % 100 == 9):
+    if( idx_sample % 100 == 0):
         print('finish iou cauculation: ',idx_sample,'/',len(l_test))
 
 print( 'iou_instacne =', iou_shape.mean())
 #%% calculate iou for each class
-
 iou_class = np.zeros(16)
 for obj_class in range(16):
-    iou_obj_class = iou_shape[y_test==obj_class]
+    iou_obj_class = iou_shape[y_test_digits==obj_class]
     iou_class[obj_class] = iou_obj_class.mean()
-
-
 print( 'iou_class =', iou_class.mean())
 
 for obj_class in range(16):

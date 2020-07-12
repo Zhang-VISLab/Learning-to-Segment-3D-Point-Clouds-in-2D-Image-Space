@@ -1,34 +1,25 @@
 # import numpy as np
 import json
 import os
-import sys
 BASE_DIR = './'
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(BASE_DIR)
-# sys.path.append(os.path.dirname(BASE_DIR))
 import provider
 
 
 # load common librarys
 import numpy as np
 import networkx as nx
-from sklearn.decomposition import PCA
-from scipy.spatial.distance  import cdist,pdist,squareform
-from sklearn.cluster import KMeans,MiniBatchKMeans
-from scipy.spatial import Delaunay
-from scipy.sparse import csc_matrix
+from sklearn.cluster import KMeans
 import time
 import h5py
 
 # load GPGL functions
-from fun_GPGL import graph_cut, fun_graph_cosntruct,fun_GPGL_layout_push,fun_graph_cosntruct_KNN
+from fun_GPGL import graph_cut, fun_graph_cosntruct,fun_GPGL_layout_push
 
 #%% global settings
 NUM_POINTS = 2048
 NUM_REPEATS = 1
 NUM_CLASSES = 40
 NUM_CUTS = 32
-NUM_NN = 3
 SIZE_SUB = 16
 SIZE_TOP = 16
 NUM_CUTPOINTS = int(NUM_POINTS/NUM_CUTS)
@@ -37,7 +28,7 @@ FLAG_ROTATION = 0
 FLAG_JITTER   = 0
 
 #%%
-kmeans_solver = KMeans(n_clusters=NUM_CUTS, n_init=1,n_jobs=1,max_iter=100)
+kmeans_solver = KMeans(n_clusters=NUM_CUTS, n_init=1,max_iter=100)
 #%%
 def GPGL2_seg(data,current_sample_seg):
     data = data+np.random.rand(len(data),len(data[0]))*1e-6
@@ -84,19 +75,16 @@ def GPGL2_seg(data,current_sample_seg):
         cuts_count[label] +=1
     pos_all=np.array(pos_all)
 
-
-
-
     ##%% assign all features into the grid map
     mat = np.zeros([SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,3])
     seg = np.zeros([SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,51])
     seg[:,:,-1] = 1
-    
+
     for data1,seg1, pos in zip(data,current_sample_seg,pos_all):
         mat[pos[0],pos[1]]=data1
         seg[pos[0],pos[1],int(seg1)]=1
         seg[pos[0],pos[1],-1]=0
-    
+
     num_nodes_m = np.sum(np.linalg.norm(mat,axis=-1)>0)
     node_loss_rate=(1- num_nodes_m/NUM_POINTS)
     return mat, seg, pos_all, node_loss_rate
@@ -139,13 +127,13 @@ def parepare_dataset(sess,NUM_REPEATS,file_name):
         current_data, current_label, current_seg= provider.loadDataFile_with_seg(cur_train_filename)
         file_size = current_data.shape[0]
         data_file_size +=file_size
-    
+
     x_set = f.create_dataset("x_"+sess, (data_file_size*NUM_REPEATS,SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,3), dtype='f')
     y_set = f.create_dataset("y_"+sess, (data_file_size*NUM_REPEATS,16), dtype='i')
     s_set = f.create_dataset("s_"+sess, (data_file_size*NUM_REPEATS,SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,51), dtype='i')
     p_set = f.create_dataset("p_"+sess, (data_file_size*NUM_REPEATS,NUM_POINTS,2), dtype='i')
     l_set = f.create_dataset("l_"+sess, (data_file_size*NUM_REPEATS,NUM_POINTS), dtype='i')
-    d_set = f.create_dataset("d_"+sess, (data_file_size*NUM_REPEATS,NUM_POINTS,3), dtype='i')
+    d_set = f.create_dataset("d_"+sess, (data_file_size*NUM_REPEATS,NUM_POINTS,3), dtype='f')
 
 
     sample_list = np.arange(data_file_size*NUM_REPEATS)
@@ -192,10 +180,8 @@ def parepare_dataset(sess,NUM_REPEATS,file_name):
 file_name = 'ShapeNet_testing.hdf5'
 
 f = h5py.File(file_name, 'w')
-# train_sample,train_node_loss,train_time = parepare_dataset('train',NUM_REPEATS,file_name)
 test_sample,test_node_loss,test_time = parepare_dataset('test',1,file_name)
 f.close()
-# print("train_sample:",train_sample,"train_node_loss:",train_node_loss,"train_time:",train_time/train_sample/1e-3,"ms/sample")
 print("test_sample:",test_sample,"test_node_loss:",test_node_loss,"test_time:",test_time/test_sample/1e-3,"ms/sample")
 
 

@@ -1,9 +1,9 @@
-import numpy as np
 import h5py
-from sklearn.cluster import KMeans
-import tensorflow as tf
-import networkx as nx
+import numpy as np
 
+
+import tensorflow as tf
+print(tf.version.VERSION)
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -13,36 +13,28 @@ sess= tf.compat.v1.Session(config=config)
 import tensorflow.keras as keras
 import tensorflow.keras.layers as L
 import tensorflow.keras.backend as K
-print(tf.version.VERSION)
+
 # load GPGL functions
-import provider
-from fun_GPGL import fun_GPGL_layout_push,graph_cut,fun_graph_cosntruct
 #%% global settings
 NUM_POINTS = 2048
 NUM_CUTS = 32
 SIZE_SUB = 16
 SIZE_TOP = 16
-batch_size = 1
 
-
-file_name = 'ShapeNet_training'
+file_name = 'prepro_2048pts_32cuts_11x_r_j'
 dataset_path = file_name+'.hdf5'
 save_path = 'ShapeNet_model.h5'
-#%% Kmeans solver initialization
-
-kmeans_solver = KMeans(n_clusters=NUM_CUTS, n_init=1,max_iter=100)
 
 #%%
 f = h5py.File(dataset_path,'r')
+
 print("loading training data")
 x_train = f['x_train']
 s_train = f['s_train']
 
-
-#%%
 print("loading testing data")
-x_test = f['x_test']
-s_test = f['s_test']
+x_test  = f['x_test']
+s_test  = f['s_test']
 
 #%%
 x_train_shape = x_train.shape
@@ -50,112 +42,33 @@ x_test_shape =  x_test.shape
 print('train samples: %d, test samples: %d' % (x_train_shape[0], x_test_shape[0]))
 
 #%%
-def GPGL2_seg(data,current_sample_seg):
-    data = data+np.random.rand(len(data),len(data[0]))*1e-6
-    dist_mat = kmeans_solver.fit_transform(data)
-
-
-    node_top,labels = graph_cut(data,dist_mat,NUM_POINTS,NUM_CUTS)
-
-    aij_mat = fun_graph_cosntruct(node_top)
-
-    H = nx.from_numpy_matrix(aij_mat)
-    pos_spring = nx.spring_layout(H)
-    pos_spring = np.array([pos for idx,pos in sorted(pos_spring.items())])
-
-    pos = fun_GPGL_layout_push(pos_spring,SIZE_SUB)
-    pos_top = fun_GPGL_layout_push(pos_spring,SIZE_TOP)
-
-    ##%%
-    pos_cuts = []
-    for i_cut in range(NUM_CUTS):
-        pos_cut_3D = data[labels==i_cut,:]
-
-        if(len(pos_cut_3D)<5):
-            pos_raw = [[0,0],[0,1],[1,1],[1,0]]
-            pos = pos_raw[:len(pos_cut_3D)]
-            pos_cuts.append(pos)
-            continue
-        aij_mat = fun_graph_cosntruct(pos_cut_3D)
-        H = nx.from_numpy_matrix(aij_mat)
-        pos_spring = nx.spring_layout(H)
-        pos_spring = np.array([pos for idx,pos in sorted(pos_spring.items())])
-
-        pos = fun_GPGL_layout_push(pos_spring,SIZE_SUB)
-
-
-        pos_cuts.append(pos)
-
-
-    ##%% combine all layout positions
-    cuts_count = np.zeros(NUM_CUTS).astype(np.int)
-    pos_all = []
-    for idx in range(NUM_POINTS):
-        label = labels[idx]
-        pos_all.append(pos_cuts[label][cuts_count[label]]+pos_top[label]*SIZE_SUB)
-        cuts_count[label] +=1
-    pos_all=np.array(pos_all)
-
-    ##%% assign all features into the grid map
-    mat = np.zeros([SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,3])
-    seg = np.zeros([SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,51])
-    seg[:,:,-1] = 1
-
-    for data1,seg1, pos in zip(data,current_sample_seg,pos_all):
-        mat[pos[0],pos[1]]=data1
-        seg[pos[0],pos[1],int(seg1)]=1
-        seg[pos[0],pos[1],-1]=0
-
-    return mat, seg
-
-
-
-#%%
 class DataGenerator(keras.utils.Sequence):
-    def __init__(self, x_set, s_set, batch_size=1,FLAG_ROTATION=0,FLAG_JITTER=0,shuffle=0):
+    def __init__(self, x_set, s_set, shuffle=0):
         self.x_set = x_set
         self.s_set = s_set
         self.size = len(s_set)
         self.indexes = np.arange(self.size)
-        self.batch_size = batch_size
         self.shuffle = shuffle
-        self.FLAG_JITTER = FLAG_JITTER
-        self.FLAG_ROTATION =FLAG_ROTATION
         self.on_epoch_end()
 
     def __len__(self):
-        return self.size//self.batch_size
+        return self.size
 
     def __getitem__(self, index):
-        idx_temp = self.indexes[index*self.batch_size:(index+1)*self.batch_size]
+        idx_temp = self.indexes[index]
 
-        current_sample_data = self.x_set[idx_temp]
-        label_batch = self.s_set[idx_temp]
+        x_data = self.x_set[idx_temp:idx_temp+1]
+        s_data = self.s_set[idx_temp:idx_temp+1]
 
-        final_data = current_sample_data[:,:NUM_POINTS,:]
-
-
-        if(self.FLAG_ROTATION):
-            final_data = provider.rotate_point_cloud(final_data)
-        if(self.FLAG_JITTER):
-            final_data = provider.jitter_point_cloud(final_data)
-
-        data_batch = np.zeros([len(label_batch),SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,3])
-        seg_batch  = np.zeros([len(label_batch),SIZE_SUB*SIZE_TOP,SIZE_SUB*SIZE_TOP,51])
-        for idx in range(len(label_batch)):
-            data_batch[idx],seg_batch[idx]=GPGL2_seg(final_data[idx],label_batch[idx])
-
-
-        return data_batch, seg_batch
+        return x_data, s_data
 
     def on_epoch_end(self):
         if self.shuffle == True:
             np.random.shuffle(self.indexes)
 
 #%%
-
-train_generator = DataGenerator(x_train,s_train,batch_size,FLAG_ROTATION=1,FLAG_JITTER=1,shuffle=1)
-test_generator = DataGenerator(x_test,s_test,1)
+train_generator = DataGenerator(x_train,s_train,1)
+test_generator = DataGenerator(x_test,s_test,0)
 
 #%%
 def weighted_acc(y_true, y_pred):
@@ -232,6 +145,7 @@ model.compile(opti,loss ='categorical_crossentropy',metrics=[weighted_acc])
 
 print(model.summary())
 
+
 #%%
 print("-------------------------------")
 print("*******************************")
@@ -242,11 +156,9 @@ checkpointer = keras.callbacks.ModelCheckpoint(filepath=save_path, monitor='val_
 namecall =  keras.callbacks.LambdaCallback(on_epoch_begin=lambda epoch,logs: print("*****",save_path,"*****"))
 
 
-history = model.fit(x=train_generator,class_weight = [],
-                              epochs = 300,  verbose=1,
-                              validation_data=test_generator,
-                               callbacks=[checkpointer,namecall]
-                              )
+history = model.fit(x=train_generator, validation_data=test_generator,
+        epochs = 30, verbose=1, callbacks=[checkpointer,namecall])
 
 print("Best pixel wise accuracy",max(history.history['val_weighted_acc']))
 
+#%%
