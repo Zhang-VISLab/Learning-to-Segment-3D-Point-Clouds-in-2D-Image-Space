@@ -20,7 +20,7 @@ dataset_path = 'ShapeNet_prepro.hdf5'
 result_path = 'ShapeNet_testing_result.hdf5'
 model_path = 'ShapeNet_model.h5'
 f = h5py.File(dataset_path, 'r')
-
+class_name = np.genfromtxt('hdf5_data/all_object_categories.txt',dtype='U')[:,0]
 #%%
 print("loading testing data")
 f = h5py.File(dataset_path,'r')
@@ -119,4 +119,4 @@ for obj_class in range(16):
 print( 'iou_class =', iou_class.mean())
 
 for obj_class in range(16):
-    print('class',obj_class,",iou=",iou_class[obj_class])
+    print('class',obj_class,', class name:',class_name[obj_class],",iou=",iou_class[obj_class])
