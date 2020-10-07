@@ -8,7 +8,8 @@ In contrast to the literature where local patterns in 3D point clouds are captur
 ![ShapeNet_Table](ShapeNet_table.png)
 
 
-Note1: We are terribly sorry that we lost our CVPR 2020 code after submission. This repository is a reproduced work, and we released a pre-trained network model with 88.0% instance-mean-iou and 86.5% class-mean-iou. An updated ArXiv preprint is available [here](https://arxiv.org/abs/2003.05593).
+## Notice
+We are terribly sorry that we lost our CVPR 2020 code after submission. This repository is a reproduced work, and we released a pre-trained network model with 88.0% instance-mean-iou and 86.5% class-mean-iou. An updated ArXiv preprint is available [here](https://arxiv.org/abs/2003.05593).
 
 
 ##
