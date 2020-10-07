@@ -1,0 +1,8 @@
+numpy
+scipy
+scikit-learn
+networkx
+h5py
+tensorflow-gpu
+matplotlib
+seaborn

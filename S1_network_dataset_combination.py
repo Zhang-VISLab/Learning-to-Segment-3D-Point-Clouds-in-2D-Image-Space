@@ -1,5 +1,6 @@
 import os
 import h5py
+import numpy as np
 BASE_DIR= 'hdf5_data/'
 
 #%% analyze the dataset
@@ -10,6 +11,8 @@ dir_list = os.listdir(BASE_DIR)
 
 train_files = [f for f in dir_list if f.startswith("ply_data_train") or f.startswith("ply_data_val")]
 test_files = [f for f in dir_list if f.startswith("ply_data_test")]
+train_files = np.sort(train_files)
+test_files = np.sort(test_files)
 
 train_length = 0
 for train_file in train_files:
