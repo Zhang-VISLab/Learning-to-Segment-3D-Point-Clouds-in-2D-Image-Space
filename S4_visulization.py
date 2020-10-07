@@ -22,7 +22,7 @@ pre_test = f['pre_test']
 
 #%% select a test sample
 idx_class = 0
-idx_class_sample = 1
+idx_class_sample = 0
 
 idx_sample_list = np.where(y_test==idx_class)[0]
 idx_sample = idx_sample_list[idx_class_sample]

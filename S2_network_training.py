@@ -26,7 +26,7 @@ SIZE_IMG = SIZE_SUB*SIZE_SUB
 dataset_path = 'ShapeNet_prepro.hdf5'
 save_path = 'ShapeNet_model.h5'
 
-epochs = 100
+epochs = 200
 #%%
 f = h5py.File(dataset_path,'r')
 
