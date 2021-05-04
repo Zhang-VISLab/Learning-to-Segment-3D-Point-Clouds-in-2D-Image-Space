@@ -26,13 +26,13 @@ SIZE_IMG = SIZE_SUB*SIZE_SUB
 dataset_path = 'ShapeNet_prepro.hdf5'
 save_path = 'ShapeNet_model.h5'
 
-epochs = 200
+epochs = 100
 #%%
 f = h5py.File(dataset_path,'r')
 
 #%% initialize the data loader
 train_loader = fun.Dataloder(f,'train', SIZE_IMG, batch_size=4,shuffle=1)
-test_loader = fun.Dataloder(f,'test', SIZE_IMG, batch_size=1,shuffle=0)
+val_loader = fun.Dataloder(f,'val', SIZE_IMG, batch_size=1,shuffle=0)
 
 #%%
 input_shape = [SIZE_IMG,SIZE_IMG,3]
@@ -73,20 +73,10 @@ ouputs = L.Concatenate(name="segment_out")([ouputs,not_mask])
 model = keras.Model(inputs=inputs1, outputs=[ouputs])
 print(model.summary())
 #%%
-learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(
-    1e-4,
-    len(train_loader)*25,
-    1e-4,
-    power=0.1)
-
-opti = keras.optimizers.Adam(learning_rate_fn)
+opti = keras.optimizers.Adam(1e-4)
 model.compile(opti,loss ='categorical_crossentropy',metrics=fun.iou)
 
 #%%
-model.save('ShapeNet_model_ori.h5')
-model.load_weights('ShapeNet_model_16.h5')
-# model.load_weights(save_path)
-  #%%
 print("-------------------------------")
 print("*******************************")
 print("*****",save_path,"*****")
@@ -95,7 +85,7 @@ print("-------------------------------")
 checkpointer = keras.callbacks.ModelCheckpoint(filepath=save_path, monitor='val_iou',mode='max', verbose=1, save_best_only=True,save_weights_only=False)
 
 
-history = model.fit(x=train_loader, validation_data=test_loader,
+history = model.fit(x=train_loader, validation_data=val_loader,
         epochs = epochs, verbose=1, callbacks=[checkpointer])
 
 print("Best pixel wise accuracy",max(history.history['iou']))
