@@ -61,7 +61,7 @@ def GPGL2_seg(data,current_sample_seg):
         pos_cuts.append(pos)
 
     ##%% combine all layout positions
-    cuts_count = np.zeros(NUM_CUTS).astype(np.int)
+    cuts_count = np.zeros(NUM_CUTS).astype(np.int64)
     pos_all = []
     for idx in range(NUM_POINTS):
         label = labels[idx]
@@ -77,13 +77,8 @@ def GPGL2_seg(data,current_sample_seg):
 #%%
 def parepare_dataset(sess,NUM_REPEATS,file_name):
     f0 = h5py.File('ShapeNet_training.hdf5','r')
-    test_size = len(f0['x_test'])
-    train_size = len(f0['x_train'])
-
-    if(sess=='train'):
-        data_file_size = train_size
-    else:
-        data_file_size = test_size
+    
+    data_file_size = len(f0['x_'+sess])
 
     y_set_out = f.create_dataset("y_"+sess, (data_file_size*NUM_REPEATS,1), dtype='i')                                     # point cloud category
     p_set_out = f.create_dataset("p_"+sess, (data_file_size*NUM_REPEATS,NUM_POINTS,2), dtype='i')                           # point pos in 2D
@@ -96,14 +91,9 @@ def parepare_dataset(sess,NUM_REPEATS,file_name):
     time_begin = time.time_ns()
 
     ##%% load original dataset
-    if sess == 'test':
-        x_set = f0['x_test'][:]
-        s_set = f0['s_test'][:]
-        y_set = f0['y_test'][:]
-    elif sess == 'train':
-        x_set = f0['x_train'][:]
-        s_set = f0['s_train'][:]
-        y_set = f0['y_train'][:]
+    x_set = f0['x_'+sess][:]
+    s_set = f0['s_'+sess][:]
+    y_set = f0['y_'+sess][:]
 
     for i_repeat in range(NUM_REPEATS):
 
@@ -147,12 +137,14 @@ file_name ='ShapeNet_prepro.hdf5'
 ##%% create training and testing sets
 f = h5py.File(file_name, 'w')
 train_sample,train_node_loss,train_time = parepare_dataset('train',NUM_REPEATS,file_name)
+val_sample,val_node_loss,val_time = parepare_dataset('val',1,file_name)
 test_sample,test_node_loss,test_time = parepare_dataset('test',1,file_name)
 f.close()
 
 
 #%% output logs
 print("train_sample:",train_sample,"train_node_loss:",train_node_loss,"train_time:",train_time/train_sample/1e6,"ms/sample")
+print("val_sample:",val_sample,"val_node_loss:",val_node_loss,"val_time:",val_time/val_sample/1e6,"ms/sample")
 print("test_sample:",test_sample,"test_node_loss:",test_node_loss,"test_time:",test_time/test_sample/1e6,"ms/sample")
 wall_clock_end = time.time()
 print('Dataset perpration time:',wall_clock_end - wall_clock_start,'s.')

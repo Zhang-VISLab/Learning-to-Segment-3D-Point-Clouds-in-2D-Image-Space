@@ -42,18 +42,6 @@ def iou(y_true,y_pred):
     iou = iou/num_classes
     return iou
 
-def weighted_acc(y_true, y_pred):
-    y_true_digit = K.argmax(y_true,axis=-1)
-    y_pred_digit = K.argmax(y_pred,axis=-1)
-    mask = tf.subtract(K.constant(1.0,dtype=tf.float32),y_pred[:,:,:,-1])
-    true_mat = K.cast(K.equal(y_true_digit,y_pred_digit),K.floatx())
-
-    tp = K.sum(K.minimum(true_mat,mask))
-    fp = K.sum(K.minimum(1-true_mat,mask))
-    fn = K.sum(K.minimum(1-true_mat,mask))
-
-    return tp/(tp+fp+fn+1e-12)
-
 def build_mask(inputs):
     mask_mat = K.stop_gradient(K.abs(inputs))
     mask = K.stop_gradient(K.sum(mask_mat,axis=-1,keepdims=False))
