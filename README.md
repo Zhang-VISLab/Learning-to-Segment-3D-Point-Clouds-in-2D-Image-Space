@@ -12,7 +12,7 @@ In contrast to the literature where local patterns in 3D point clouds are captur
 
 
 ## Notice
-1. We are terribly sorry that we lost our CVPR 2020 code after submission. This repository is a reproduced work, and we released a pre-trained network model. The model is a checkpoint where we got the highest instance-mean-iou on ShapeNet validation set (84.9%). This pre-trained model achieves 87.3% instance-mean-IoU and 84.4% class-mean-IoU on the testing set. An updated ArXiv preprint is available [here](https://arxiv.org/abs/2003.05593).
+1. We are terribly sorry that we missed our CVPR 2020 code submission. This repository is a reproduced work, and we released a pre-trained network model with 88.0% instance-mean-iou and 86.5% class-mean-iou. An updated ArXiv preprint is available [here](https://arxiv.org/abs/2003.05593).
 2. In response to ISSUE #19, we also trained the network using ShapeNet train-val-test splits and optimized on the validation set. The val-optimized model achieved 85.9% instance-mean-IoU, and the testing result is shown below. The corresponding prepared dataset ([link](https://drive.google.com/file/d/17GoyTtoA1ki5tkppVO5Y_NxPDYtzjHEi/view?usp=sharing)) and model ([link](https://drive.google.com/file/d/1nrD6Z82GwuOtErZs54owHEuOVCvx_nPl/view?usp=sharing)) are available online.
 ![ShapeNet_Table_val](https://drive.google.com/uc?export=view&id=1txI7eqZxZih64N6lHhfvxJy69IGsnEBg)
 
