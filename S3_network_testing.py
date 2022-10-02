@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.backend as K
+
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 0.7
