@@ -43,7 +43,7 @@ This step took 22 hours on our machine. A prepared dataset is available [here](h
 ```
 python S2_network_training
 ```
-The training session took 200 hours. A pre-trained network model is available [here](https://drive.google.com/file/d/16aLARb__Xmzx6-XZAeTP3xG2Dq3iw9D6/view?usp=sharing).
+The training session took 200 hours. A pre-trained network model is available [here](https://drive.google.com/file/d/1XYdY51otNqsYt2hvy8xdJYuoD9kVhHxo/view?usp=sharing).
 
 ## Test the network
 After training, we have got a well trained network models. To predict the semantic labels and evaluate on testing sets, run the following command:
