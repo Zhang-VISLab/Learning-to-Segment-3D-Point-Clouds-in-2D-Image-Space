@@ -13,7 +13,7 @@ In contrast to the literature where local patterns in 3D point clouds are captur
 
 ## Notice
 1. **Training/Testing setting**: We are terribly sorry that we missed our CVPR 2020 code submission. This repository is a reproduced work, and we released a pre-trained network model with 88.0% instance-mean-iou and 86.5% class-mean-iou. An updated ArXiv preprint is available [here](https://arxiv.org/abs/2003.05593). In this setting, we show our best testing results.
-2. **Training/Validation/Testing setting**: In response to ISSUE #19, we also trained the network using ShapeNet train-val-test splits and optimized on the validation set. The val-optimized model achieved 85.9% instance-mean-IoU, and the testing result is shown below. The corresponding prepared dataset ([link](https://drive.google.com/file/d/17GoyTtoA1ki5tkppVO5Y_NxPDYtzjHEi/view?usp=sharing)) and model ([link](https://drive.google.com/file/d/1nrD6Z82GwuOtErZs54owHEuOVCvx_nPl/view?usp=sharing)) are available online.
+2. **Training/Validation/Testing setting**: In response to ISSUE #19, we also trained the network using ShapeNet train-val-test splits and optimized on the validation set. The val-optimized model achieved 85.9% instance-mean-IoU, and the testing result is shown below. The corresponding prepared dataset ([link](https://drive.google.com/file/d/1gdcHCsT9vqz5G2xzVg0xq1LMKxtsx8vp/view?usp=share_link)) and model ([link](https://drive.google.com/file/d/1nrD6Z82GwuOtErZs54owHEuOVCvx_nPl/view?usp=sharing)) are available online.
 ![ShapeNet_Table_val](https://drive.google.com/uc?export=view&id=1txI7eqZxZih64N6lHhfvxJy69IGsnEBg) 
 In this setting, we tune the hyper-parameters using the validation data and then report our results on testing data.
 
@@ -36,14 +36,14 @@ sh S0_download_data.sh
 python S1_network_dataset_combination.py
 python S1_network_dataset_preparation.py
 ```
-This step took 22 hours on our machine. A prepared dataset is available [here](https://drive.google.com/file/d/1gdcHCsT9vqz5G2xzVg0xq1LMKxtsx8vp/view?usp=sharing).
+This step took 22 hours on our machine. A prepared dataset is available [here](https://drive.google.com/file/d/1gdcHCsT9vqz5G2xzVg0xq1LMKxtsx8vp/view?usp=share_link).
 
 ##  Training using prepared dataset
 
 ```
 python S2_network_training
 ```
-The training session took 200 hours. A pre-trained network model is available [here](https://drive.google.com/file/d/16aLARb__Xmzx6-XZAeTP3xG2Dq3iw9D6/view?usp=sharing).
+The training session took 200 hours. A pre-trained network model is available [here](https://drive.google.com/file/d/1nrD6Z82GwuOtErZs54owHEuOVCvx_nPl/view?usp=sharing).
 
 ## Test the network
 After training, we have got a well trained network models. To predict the semantic labels and evaluate on testing sets, run the following command:
